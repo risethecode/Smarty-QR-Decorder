@@ -11,30 +11,46 @@
 <style>
 body{
     margin:0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg,#c2e9fb,#a1c4fd);
+    font-family:'Segoe UI',sans-serif;
+    background: linear-gradient(-45deg,#89f7fe,#66a6ff,#c2e9fb,#a1c4fd);
+    background-size:400% 400%;
+    animation:gradientBG 12s ease infinite;
     display:flex;
     justify-content:center;
     align-items:center;
     min-height:100vh;
 }
+@keyframes gradientBG{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+}
 .container{
     width:90%;
     max-width:900px;
     background:rgba(255,255,255,0.25);
-    backdrop-filter: blur(15px);
+    backdrop-filter: blur(20px);
     padding:30px;
     border-radius:20px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    box-shadow:0 15px 40px rgba(0,0,0,0.3);
     animation:fadeIn 1s ease-in-out;
 }
 h1{
     text-align:center;
+    font-size:28px;
     color:#003366;
+}
+.brand{
+    text-align:center;
+    font-size:22px;
+    font-weight:bold;
+    color:#002244;
+    margin-bottom:15px;
+    letter-spacing:1px;
 }
 .upload-box{
     border:2px dashed #003366;
-    padding:30px;
+    padding:25px;
     text-align:center;
     border-radius:15px;
     cursor:pointer;
@@ -43,13 +59,18 @@ h1{
 .upload-box:hover{
     background:rgba(255,255,255,0.4);
 }
+.file-info{
+    margin-top:10px;
+    font-weight:bold;
+    color:#003366;
+}
 button{
-    padding:12px 20px;
+    padding:10px 18px;
     border:none;
     border-radius:8px;
     font-weight:bold;
     cursor:pointer;
-    margin:10px 5px;
+    margin:8px 5px;
     transition:0.3s;
 }
 .decode-btn{
@@ -62,6 +83,10 @@ button{
     color:white;
 }
 .copy-btn:hover{transform:scale(1.05);}
+.choose-btn{
+    background:#007bff;
+    color:white;
+}
 #output{
     margin-top:20px;
     background:white;
@@ -87,27 +112,47 @@ video{
 <body>
 
 <div class="container">
+
+<div class="brand">Powerd by: 𝙎𝙢𝙖𝙧𝙩𝙮 𝙈𝙎</div>
+
 <h1>🚀 Advanced UPI QR Decoder</h1>
 
 <div class="upload-box" onclick="document.getElementById('fileInput').click()">
 Click or Drag & Drop File (Image / PDF)
-<input type="file" id="fileInput" accept="image/*,.pdf" hidden>
+<input type="file" id="fileInput" accept="image/*,.pdf" hidden onchange="showFileName(this)">
 </div>
+
+<div class="file-info" id="fileName"></div>
 
 <div style="text-align:center;">
 <button class="decode-btn" onclick="decodeQR()">Decode Now</button>
 <button class="decode-btn" onclick="startCamera()">Live Camera Scan</button>
+<button class="choose-btn" onclick="chooseAnother()">Choose Another</button>
 <button class="copy-btn" onclick="copyOutput()">Copy Now</button>
 </div>
 
 <video id="video" hidden></video>
 <canvas id="canvas" hidden></canvas>
 
-<div id="output">Decoded output will appear here...                                               <h1>Powerd By: Smarty MS<h1></div>
+<div id="output">Decoded output will appear here...</div>
 
 </div>
 
 <script>
+
+function showFileName(input){
+    if(input.files.length > 0){
+        document.getElementById("fileName").innerText =
+        "File Uploaded ✅ : " + input.files[0].name;
+    }
+}
+
+function chooseAnother(){
+    document.getElementById("fileInput").value = "";
+    document.getElementById("fileName").innerText = "";
+    document.getElementById("output").innerText =
+    "Decoded output will appear here...";
+}
 
 async function decodeQR(){
     const file = document.getElementById("fileInput").files[0];
@@ -176,13 +221,13 @@ function processData(data){
         result += "Amount: " + (amt || "N/A") + "\n";
         result += "Note: " + (note || "N/A") + "\n";
 
-        // Attempt Mobile Extraction
         let mobileMatch = data.match(/(\+91)?[6-9]\d{9}/);
-        result += "Mobile (Detected): " + (mobileMatch ? mobileMatch[0] : "Mobile Number not Connected") + "\n";
+        result += "Mobile (Detected): " +
+        (mobileMatch ? mobileMatch[0] : "Not Found") + "\n";
 
-        // If UPI ID numeric based
         if(upi && /^[6-9]\d{9}@/.test(upi)){
-            result += "Mobile (From UPI ID): " + upi.split("@")[0] + "\n";
+            result += "Mobile (From UPI ID): " +
+            upi.split("@")[0] + "\n";
         }
     }
 
@@ -194,14 +239,18 @@ function output(text){
 }
 
 function copyOutput(){
-    navigator.clipboard.writeText(document.getElementById("output").innerText);
+    navigator.clipboard.writeText(
+        document.getElementById("output").innerText
+    );
     alert("Copied Successfully!");
 }
 
 async function startCamera(){
     const video = document.getElementById("video");
     video.hidden = false;
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    const stream = await navigator.mediaDevices.getUserMedia(
+        {video:{facingMode:"environment"}}
+    );
     video.srcObject = stream;
     video.setAttribute("playsinline", true);
     video.play();
@@ -214,11 +263,17 @@ async function startCamera(){
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video,0,0);
-            const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
-            const code = jsQR(imgData.data, canvas.width, canvas.height);
+            const imgData = ctx.getImageData(
+                0,0,canvas.width,canvas.height
+            );
+            const code = jsQR(
+                imgData.data,
+                canvas.width,
+                canvas.height
+            );
             if(code){
                 processData(code.data);
-                stream.getTracks().forEach(track=>track.stop());
+                stream.getTracks().forEach(t=>t.stop());
                 video.hidden = true;
                 return;
             }
