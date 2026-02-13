@@ -3,55 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UPI QR Decoder</title>
+<title>Advanced UPI QR Decoder</title>
 
-<!-- QR Scanner Library -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
 <style>
 body{
-    font-family: Arial, sans-serif;
-    background:#111;
-    color:white;
-    text-align:center;
-    padding:30px;
+    margin:0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#c2e9fb,#a1c4fd);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
 }
 .container{
-    max-width:700px;
-    margin:auto;
-    background:#1e1e1e;
+    width:90%;
+    max-width:900px;
+    background:rgba(255,255,255,0.25);
+    backdrop-filter: blur(15px);
     padding:30px;
-    border-radius:10px;
+    border-radius:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    animation:fadeIn 1s ease-in-out;
 }
-input{
-    padding:10px;
-    width:100%;
-    margin-bottom:15px;
+h1{
+    text-align:center;
+    color:#003366;
+}
+.upload-box{
+    border:2px dashed #003366;
+    padding:30px;
+    text-align:center;
+    border-radius:15px;
+    cursor:pointer;
+    transition:0.3s;
+}
+.upload-box:hover{
+    background:rgba(255,255,255,0.4);
 }
 button{
     padding:12px 20px;
     border:none;
-    cursor:pointer;
-    margin:10px;
+    border-radius:8px;
     font-weight:bold;
-    border-radius:5px;
+    cursor:pointer;
+    margin:10px 5px;
+    transition:0.3s;
 }
 .decode-btn{
-    background:orange;
+    background:#ff9800;
     color:black;
 }
+.decode-btn:hover{transform:scale(1.05);}
 .copy-btn{
-    background:green;
+    background:#28a745;
     color:white;
 }
+.copy-btn:hover{transform:scale(1.05);}
 #output{
     margin-top:20px;
-    background:#000;
-    padding:15px;
-    border-radius:5px;
-    text-align:left;
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    color:black;
     white-space:pre-wrap;
+    max-height:300px;
+    overflow:auto;
+}
+video{
+    width:100%;
+    border-radius:10px;
+    margin-top:10px;
+}
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(20px);}
+    to{opacity:1; transform:translateY(0);}
 }
 </style>
 </head>
@@ -59,17 +87,23 @@ button{
 <body>
 
 <div class="container">
-<h2>UPI QR Code Decoder</h2>
+<h1>🚀 Advanced UPI QR Decoder</h1>
 
-<input type="file" id="fileInput" accept="image/*,.pdf">
+<div class="upload-box" onclick="document.getElementById('fileInput').click()">
+Click or Drag & Drop File (Image / PDF)
+<input type="file" id="fileInput" accept="image/*,.pdf" hidden>
+</div>
 
+<div style="text-align:center;">
 <button class="decode-btn" onclick="decodeQR()">Decode Now</button>
-
-<div id="output">Decoded data will appear here...</div>
-
+<button class="decode-btn" onclick="startCamera()">Live Camera Scan</button>
 <button class="copy-btn" onclick="copyOutput()">Copy Now</button>
+</div>
 
-<canvas id="canvas" style="display:none;"></canvas>
+<video id="video" hidden></video>
+<canvas id="canvas" hidden></canvas>
+
+<div id="output">Decoded output will appear here...</div>
 
 </div>
 
@@ -77,22 +111,11 @@ button{
 
 async function decodeQR(){
     const file = document.getElementById("fileInput").files[0];
-    if(!file){
-        alert("Please upload file");
-        return;
-    }
-
-    if(file.size > 10 * 1024 * 1024 * 1024){
-        alert("Max 10GB supported");
-        return;
-    }
-
-    const output = document.getElementById("output");
-    output.innerText = "Processing...";
+    if(!file){ alert("Upload file first"); return; }
 
     if(file.type === "application/pdf"){
-        await decodePDF(file);
-    }else{
+        decodePDF(file);
+    } else {
         decodeImage(file);
     }
 }
@@ -107,15 +130,10 @@ function decodeImage(file){
             canvas.width = img.width;
             canvas.height = img.height;
             ctx.drawImage(img,0,0);
-
-            const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-            const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-            if(code){
-                processData(code.data);
-            }else{
-                document.getElementById("output").innerText = "No QR Code found.";
-            }
+            const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+            const code = jsQR(imgData.data, canvas.width, canvas.height);
+            if(code){ processData(code.data); }
+            else{ output("No QR Found"); }
         };
         img.src = reader.result;
     };
@@ -134,44 +152,80 @@ async function decodePDF(file){
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         await page.render({canvasContext:ctx, viewport:viewport}).promise;
-
-        const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-        if(code){
-            processData(code.data);
-        }else{
-            document.getElementById("output").innerText = "No QR found in PDF.";
-        }
+        const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+        const code = jsQR(imgData.data, canvas.width, canvas.height);
+        if(code){ processData(code.data); }
+        else{ output("No QR Found in PDF"); }
     };
     reader.readAsArrayBuffer(file);
 }
 
 function processData(data){
-    let parsed = {};
-    parsed["Raw Data"] = data;
+    let result = "===== RAW DATA =====\n" + data + "\n\n";
 
     if(data.includes("upi://pay")){
         const url = new URL(data);
-        parsed["UPI ID"] = url.searchParams.get("pa");
-        parsed["Name"] = url.searchParams.get("pn");
-        parsed["Amount"] = url.searchParams.get("am");
-        parsed["Currency"] = url.searchParams.get("cu");
-        parsed["Transaction Note"] = url.searchParams.get("tn");
+        const upi = url.searchParams.get("pa");
+        const name = url.searchParams.get("pn");
+        const amt = url.searchParams.get("am");
+        const note = url.searchParams.get("tn");
+
+        result += "===== PARSED DETAILS =====\n";
+        result += "UPI ID: " + (upi || "N/A") + "\n";
+        result += "Name: " + (name || "N/A") + "\n";
+        result += "Amount: " + (amt || "N/A") + "\n";
+        result += "Note: " + (note || "N/A") + "\n";
+
+        // Attempt Mobile Extraction
+        let mobileMatch = data.match(/(\+91)?[6-9]\d{9}/);
+        result += "Mobile (Detected): " + (mobileMatch ? mobileMatch[0] : "Not Found") + "\n";
+
+        // If UPI ID numeric based
+        if(upi && /^[6-9]\d{9}@/.test(upi)){
+            result += "Mobile (From UPI ID): " + upi.split("@")[0] + "\n";
+        }
     }
 
-    let outputText = "";
-    for(let key in parsed){
-        outputText += key + " : " + (parsed[key] || "Not Available") + "\n";
-    }
+    output(result);
+}
 
-    document.getElementById("output").innerText = outputText;
+function output(text){
+    document.getElementById("output").innerText = text;
 }
 
 function copyOutput(){
-    const text = document.getElementById("output").innerText;
-    navigator.clipboard.writeText(text);
-    alert("Copied!");
+    navigator.clipboard.writeText(document.getElementById("output").innerText);
+    alert("Copied Successfully!");
+}
+
+async function startCamera(){
+    const video = document.getElementById("video");
+    video.hidden = false;
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    video.srcObject = stream;
+    video.setAttribute("playsinline", true);
+    video.play();
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    function scan(){
+        if(video.readyState === video.HAVE_ENOUGH_DATA){
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video,0,0);
+            const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+            const code = jsQR(imgData.data, canvas.width, canvas.height);
+            if(code){
+                processData(code.data);
+                stream.getTracks().forEach(track=>track.stop());
+                video.hidden = true;
+                return;
+            }
+        }
+        requestAnimationFrame(scan);
+    }
+    scan();
 }
 
 </script>
