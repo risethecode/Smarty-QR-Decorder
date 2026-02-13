@@ -223,7 +223,7 @@ function processData(data){
 
         let mobileMatch = data.match(/(\+91)?[6-9]\d{9}/);
         result += "Mobile (Detected): " +
-        (mobileMatch ? mobileMatch[0] : "Not Found") + "\n";
+        (mobileMatch ? mobileMatch[0] : "Mobile Number not Connected yet.") + "\n";
 
         if(upi && /^[6-9]\d{9}@/.test(upi)){
             result += "Mobile (From UPI ID): " +
