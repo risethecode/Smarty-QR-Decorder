@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UPI QR Decoder</title>
+
+<!-- QR Scanner Library -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#111;
+    color:white;
+    text-align:center;
+    padding:30px;
+}
+.container{
+    max-width:700px;
+    margin:auto;
+    background:#1e1e1e;
+    padding:30px;
+    border-radius:10px;
+}
+input{
+    padding:10px;
+    width:100%;
+    margin-bottom:15px;
+}
+button{
+    padding:12px 20px;
+    border:none;
+    cursor:pointer;
+    margin:10px;
+    font-weight:bold;
+    border-radius:5px;
+}
+.decode-btn{
+    background:orange;
+    color:black;
+}
+.copy-btn{
+    background:green;
+    color:white;
+}
+#output{
+    margin-top:20px;
+    background:#000;
+    padding:15px;
+    border-radius:5px;
+    text-align:left;
+    white-space:pre-wrap;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>UPI QR Code Decoder</h2>
+
+<input type="file" id="fileInput" accept="image/*,.pdf">
+
+<button class="decode-btn" onclick="decodeQR()">Decode Now</button>
+
+<div id="output">Decoded data will appear here...</div>
+
+<button class="copy-btn" onclick="copyOutput()">Copy Now</button>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+</div>
+
+<script>
+
+async function decodeQR(){
+    const file = document.getElementById("fileInput").files[0];
+    if(!file){
+        alert("Please upload file");
+        return;
+    }
+
+    if(file.size > 10 * 1024 * 1024 * 1024){
+        alert("Max 10GB supported");
+        return;
+    }
+
+    const output = document.getElementById("output");
+    output.innerText = "Processing...";
+
+    if(file.type === "application/pdf"){
+        await decodePDF(file);
+    }else{
+        decodeImage(file);
+    }
+}
+
+function decodeImage(file){
+    const reader = new FileReader();
+    reader.onload = function(){
+        const img = new Image();
+        img.onload = function(){
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img,0,0);
+
+            const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+            if(code){
+                processData(code.data);
+            }else{
+                document.getElementById("output").innerText = "No QR Code found.";
+            }
+        };
+        img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+async function decodePDF(file){
+    const reader = new FileReader();
+    reader.onload = async function(){
+        const typedarray = new Uint8Array(reader.result);
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({scale:2});
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({canvasContext:ctx, viewport:viewport}).promise;
+
+        const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+        if(code){
+            processData(code.data);
+        }else{
+            document.getElementById("output").innerText = "No QR found in PDF.";
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function processData(data){
+    let parsed = {};
+    parsed["Raw Data"] = data;
+
+    if(data.includes("upi://pay")){
+        const url = new URL(data);
+        parsed["UPI ID"] = url.searchParams.get("pa");
+        parsed["Name"] = url.searchParams.get("pn");
+        parsed["Amount"] = url.searchParams.get("am");
+        parsed["Currency"] = url.searchParams.get("cu");
+        parsed["Transaction Note"] = url.searchParams.get("tn");
+    }
+
+    let outputText = "";
+    for(let key in parsed){
+        outputText += key + " : " + (parsed[key] || "Not Available") + "\n";
+    }
+
+    document.getElementById("output").innerText = outputText;
+}
+
+function copyOutput(){
+    const text = document.getElementById("output").innerText;
+    navigator.clipboard.writeText(text);
+    alert("Copied!");
+}
+
+</script>
+
+</body>
+</html>
