@@ -103,7 +103,7 @@ Click or Drag & Drop File (Image / PDF)
 <video id="video" hidden></video>
 <canvas id="canvas" hidden></canvas>
 
-<div id="output">Decoded output will appear here... /n Powerd By: **Smarty MS**/n</div>
+<div id="output">'Decoded output will appear here... /n Powerd By: **Smarty MS**/n'</div>
 
 </div>
 
@@ -178,7 +178,7 @@ function processData(data){
 
         // Attempt Mobile Extraction
         let mobileMatch = data.match(/(\+91)?[6-9]\d{9}/);
-        result += "Mobile (Detected): " + (mobileMatch ? mobileMatch[0] : "Not Found") + "\n";
+        result += "Mobile (Detected): " + (mobileMatch ? mobileMatch[0] : "Mobile Number not Connected") + "\n";
 
         // If UPI ID numeric based
         if(upi && /^[6-9]\d{9}@/.test(upi)){
